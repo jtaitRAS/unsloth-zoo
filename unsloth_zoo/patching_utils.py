@@ -196,18 +196,25 @@ def patch_model_and_tokenizer(
 
     # Fix torch_dtype
     m = model
+    print('calling first while in patch_model_and_tokenizer', type(m), hasattr(m, "model"))
     while hasattr(m, "model"):
+        print('inside while in patch_model_and_tokenizer')
         if hasattr(m, "config"):
+            print('m.config.torch_dtype in patch_model_and_tokenizer', m.config.torch_dtype)
             if   m.config.torch_dtype ==  "float32": m.config.torch_dtype = torch.float32
             elif m.config.torch_dtype == "bfloat16": m.config.torch_dtype = torch.bfloat16
             elif m.config.torch_dtype ==  "float16": m.config.torch_dtype = torch.float16
+            print('after if statement in patch_model_and_tokenizer m.config.torch_dtype is', m.config.torch_dtype)
         pass
         m = m.model
     pass
+    print('after while in patch_model_and_tokenizer m is', type(m), hasattr(m, "config"))
     if hasattr(m, "config"):
+        print('m.config.torch_dtype in patch_model_and_tokenizer', m.config.torch_dtype)
         if   m.config.torch_dtype ==  "float32": m.config.torch_dtype = torch.float32
         elif m.config.torch_dtype == "bfloat16": m.config.torch_dtype = torch.bfloat16
         elif m.config.torch_dtype ==  "float16": m.config.torch_dtype = torch.float16
+        print('after if statement in patch_model_and_tokenizer m.config.torch_dtype is', m.config.torch_dtype)
     pass
 
     # Also patch all dtypes - BnB seems to not allocate the correct type?
@@ -225,17 +232,33 @@ def patch_model_and_tokenizer(
     # Get most likely the correct data-type of the model
     try:
         correct_dtype = _get_dtype(model.config.torch_dtype)
-    except:
+        print('correct_dtype in patch_model_and_tokenizer', correct_dtype)
+    except Exception as e:
+        print('correct_dtype error in patch_model_and_tokenizer inside except', e)
         correct_dtype = model.get_input_embeddings().weight.dtype
+        print('correct_dtype in patch_model_and_tokenizer inside except', correct_dtype)
     # If we force float32, we first use bfloat16, then downcast to float16
     if do_forced_float32:
+        print('do_forced_float32 in patch_model_and_tokenizer', do_forced_float32)
         correct_dtype = torch.float16
+        print('correct_dtype in patch_model_and_tokenizer inside if do_forced_float32', correct_dtype)
         for name, module in model.named_modules():
-            if "down_proj" in name or "up_proj" in name or "gate_proj" in name:
+            # if "down_proj" in name or "up_proj" in name or "gate_proj" in name:
+            #     exec(f"module.to(torch.float16)")
+            # if "q_proj" in name or "k_proj" in name or "v_proj" in name or "o_proj" in name:
+            #     exec(f"module.to(torch.float16)")
+            # if "lm_head" in name or "embed_tokens" in name:
+            #     exec(f"module.to(torch.float16)")
+            # if "norm" in name:
+            #     exec(f"module.to(torch.float32)")
+            #     assert(module.weight.dtype == torch.float32)
+            if "down_proj" in name or "up_proj" in name or "gate_proj" in name or "fc1" in name or "fc2" in name:
                 exec(f"module.to(torch.float16)")
-            if "q_proj" in name or "k_proj" in name or "v_proj" in name or "o_proj" in name:
+            if "q_proj" in name or "k_proj" in name or "v_proj" in name or "o_proj" in name or "out_proj" in name:
                 exec(f"module.to(torch.float16)")
             if "lm_head" in name or "embed_tokens" in name:
+                exec(f"module.to(torch.float16)")
+            if "patch_embedding" in name:
                 exec(f"module.to(torch.float16)")
             if "norm" in name:
                 exec(f"module.to(torch.float32)")

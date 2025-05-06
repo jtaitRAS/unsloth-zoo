@@ -318,8 +318,10 @@ def initialize_unsloth_gradient_checkpointing(dtype = None):
         major_version, minor_version = torch.cuda.get_device_capability()
         SUPPORTS_BFLOAT16 = (major_version >= 8)
         dtype = torch.bfloat16 if SUPPORTS_BFLOAT16 else torch.float16
+        print('dtype in initialize_unsloth_gradient_checkpointing inside if dtype is None', dtype)
     pass
 
+    print('creating CPU buffers in dtype', dtype)
     for i in range(200):
         x = torch.empty(128*1024, dtype = dtype, device = "cpu", pin_memory = True)
         CPU_BUFFERS.append(x)
@@ -327,6 +329,7 @@ def initialize_unsloth_gradient_checkpointing(dtype = None):
 
     # Allocate buffers to how many GPUs
     n_gpus = torch.cuda.device_count()
+    print('n_gpus in initialize_unsloth_gradient_checkpointing inside if dtype is None', n_gpus, dtype)
     GPU_BUFFERS = tuple([torch.empty(2*256*2048, dtype = dtype, device = f"cuda:{i}") for i in range(n_gpus)])
 
     BACKWARD_PASS = True
@@ -447,9 +450,13 @@ class UnslothCheckpointFunction(torch.autograd.Function):
                     else:
                         ctx._saved_metadata = (None, None, None, None, None, None,)
                         tensor_inputs.append(arg)
+                        if arg.dtype == torch.bfloat16:
+                            print('arg.dtype in UnslothCheckpointFunction.forward', arg.dtype, run_function)
                     pass
                 else:
                     tensor_inputs.append(arg)
+                    if arg.dtype == torch.bfloat16:
+                        print('arg.dtype in UnslothCheckpointFunction.forward', arg.dtype, run_function)
                 pass
                 ctx.tensor_indices.append(i)
                 ctx.inputs.append(None)
