@@ -1295,7 +1295,7 @@ def patch_lora_forwards(torch_compile_options):
             "x = x.to(lora_A.weight.dtype)",
             "x = self._cast_input_dtype(x, lora_A.weight.dtype)",
         ]
-        if os.environ.get("UNSLOTH_FORCE_FLOAT32", "0") == "0":
+        if os.environ.get("UNSLOTH_GEMMA_FLOAT32", "0") == "0":
             if "torch.is_autocast_enabled()" not in source:
                 new = "if not torch.is_autocast_enabled(): "\
                     "result, x = "\
@@ -1316,7 +1316,7 @@ def patch_lora_forwards(torch_compile_options):
             success += 1
             compiled_lora_forward = \
                 COMPILED_LORA_FORWARD \
-                if os.environ.get("UNSLOTH_FORCE_FLOAT32", "0") == "0" \
+                if os.environ.get("UNSLOTH_GEMMA_FLOAT32", "0") == "0" \
                 else COMPILED_LORA_FORWARD_forced_float32
 
             forward = create_new_function(
