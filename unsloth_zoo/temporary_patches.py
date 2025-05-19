@@ -508,7 +508,6 @@ def patch_CsmForConditionalGeneration_merge():
                 labels_expanded = labels.unsqueeze(-1).repeat(1, 1, self.config.num_codebooks)
                 labels_expanded[audio_token_mask] = batched_audio_token_ids[audio_codes_mask]
                 # fix make sure to set eos_token_id as a valid label to predict
-                print('merging')
                 labels_expanded[audio_eos_token_mask] = self.config.codebook_eos_token_id
                 # mask depth decoder
                 depth_decoder_ignore_frames_idxs = (labels == -101).nonzero(as_tuple=True)
