@@ -18,25 +18,14 @@ import re
 from typing import Union, List, Optional, Tuple
 import inspect
 import torch
-import torch.nn
+import torch.nn as nn
 import os
 import logging
 
+from .common import TEMPORARY_PATCHES
+
 logger = logging.getLogger(__name__)
 
-UNSLOTH_COMPILE_DEBUG         = os.environ.get("UNSLOTH_COMPILE_DEBUG",         "0") == "1"
-UNSLOTH_COMPILE_MAXIMUM       = os.environ.get("UNSLOTH_COMPILE_MAXIMUM",       "0") == "1"
-UNSLOTH_COMPILE_IGNORE_ERRORS = os.environ.get("UNSLOTH_COMPILE_IGNORE_ERRORS", "0") == "1"
-torch_compile_options = {
-    "epilogue_fusion"   : True,
-    "max_autotune"      : UNSLOTH_COMPILE_MAXIMUM,
-    "shape_padding"     : True,
-    "trace.enabled"     : UNSLOTH_COMPILE_DEBUG,
-    "triton.cudagraphs" : False,
-}
-
-global TEMPORARY_PATCHES
-TEMPORARY_PATCHES = []
 
 def patch_Gemma3Processor():
     try:

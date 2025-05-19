@@ -13,11 +13,12 @@
 #
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 import torch
 import torch.nn as nn
 import inspect
 from typing import List, Optional, Tuple, Union
-from unsloth_zoo.gemma_patches import TEMPORARY_PATCHES
+from .common import TEMPORARY_PATCHES
 
 
 def patch_SmolVLMForConditionalGeneration_forward():
