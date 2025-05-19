@@ -22,7 +22,7 @@ import torch.nn as nn
 import os
 import logging
 
-from .common import TEMPORARY_PATCHES
+from .common import TEMPORARY_PATCHES, torch_compile_options
 
 logger = logging.getLogger(__name__)
 
