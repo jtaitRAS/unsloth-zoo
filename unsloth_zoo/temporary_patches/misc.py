@@ -752,7 +752,13 @@ def patch_GraniteMoe_ParallelExperts():
         original_init = class_obj.__init__
 
         def __init__(self, num_experts: int, input_size: int, output_size: int) -> None:
-            original_init(self, num_experts, input_size, output_size)
+            
+            nn.Module.__init__(self)
+            self.weight = nn.Parameter(torch.empty(num_experts, output_size, input_size))
+            self.num_experts = num_experts
+            self.input_size = input_size
+            self.output_size = output_size
+
             self.experts = nn.ModuleList(
                 [nn.Linear(input_size, output_size, bias=False) for _ in range(num_experts)]
             )
