@@ -761,7 +761,7 @@ def patch_GraniteMoe_ParallelExperts():
                 key = prefix + "weight"
                 if key not in state_dict:
                     return
-                
+
                 weights = state_dict.pop(key)
                 num_experts, out_size, in_size = weights.shape
                 assert num_experts == module.num_experts, f"Expected number of experts to match {num_experts} != {module.num_experts}"
