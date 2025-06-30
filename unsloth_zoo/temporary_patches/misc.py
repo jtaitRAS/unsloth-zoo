@@ -730,3 +730,58 @@ def patch_GraniteMoeHybridMambaLayer_cuda_kernels_forward():
         GraniteMoeHybridMambaLayer.cuda_kernels_forward = cuda_kernels_forward
 pass
 TEMPORARY_PATCHES.append(patch_GraniteMoeHybridMambaLayer_cuda_kernels_forward)
+
+
+def patch_GraniteMoe_ParallelExperts():
+    import importlib
+
+
+    model_to_patch = [('granitemoehybrid', 'GraniteMoeHybridParallelExperts'),
+                      ('granitemoe', 'GraniteMoeParallelExperts'),
+                      ('granitemoeshared', 'GraniteMoeSharedParallelExperts')]
+
+    for model_name, class_name in model_to_patch:
+        try:
+            model_module = importlib.import_module(f'transformers.models.{model_name}.modeling_{model_name}')
+            class_obj = getattr(model_module, class_name)
+        except:
+            if UNSLOTH_ENABLE_LOGGING:
+                print(f"Unsloth: Failed to patch {model_name} {class_name}.")
+            continue
+
+        original_init = class_obj.__init__
+        original_forward = class_obj.forward
+
+        def __init__(self, num_experts: int, input_size: int, output_size: int) -> None:
+            original_init(self, num_experts, input_size, output_size)
+            self.experts = nn.ModuleList(
+                [nn.Linear(input_size, output_size, bias=False) for _ in range(num_experts)]
+            )
+            for i in range(num_experts):
+                self.experts[i].weight.copy_(self.weight[i])
+
+            del self.weight
+
+        def forward(self, inputs, expert_size):
+            input_list = inputs.split(expert_size, dim=0)
+            output_list = []
+            for i in range(self.num_experts):
+                output_list.append(self.experts[i](input_list[i]))
+            results = torch.cat(output_list, dim=0)
+            return results
+
+        old_keys_init = inspect.signature(class_obj.__init__).parameters
+        new_keys_init = inspect.signature(__init__).parameters
+
+        old_keys_forward = inspect.signature(class_obj.forward).parameters
+        new_keys_forward = inspect.signature(forward).parameters
+
+        if old_keys_init != new_keys_init or old_keys_forward != new_keys_forward:
+            if UNSLOTH_ENABLE_LOGGING:
+                print(f"Unsloth: Failed to patch {model_name} {class_name}.")
+        else:
+            class_obj.__init__ = __init__
+            class_obj.forward = forward
+pass
+
+TEMPORARY_PATCHES.append(patch_GraniteMoe_ParallelExperts)
