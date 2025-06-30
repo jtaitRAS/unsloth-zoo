@@ -774,12 +774,17 @@ def patch_GraniteMoe_ParallelExperts():
                 for i in range(num_experts):
                     state_dict[f"{prefix}experts.{i}.weight"] = weights[i]
 
+            def _delete_dummy_weight(module, *_):
+                if "weight" in module._parameters:
+                    del module._parameters["weight"]  
+
             def _save(module, state_dict, prefix, keep_vars):
                 slices = [state_dict.pop(f"{prefix}experts.{i}.weight") 
                           for i in range(len(module.experts))]
                 state_dict[prefix + "weight"] = torch.stack(slices, dim=0)
 
             self._register_load_state_dict_pre_hook(_pre_load, with_module=True)
+            self._register_state_dict_post_hook(_delete_dummy_weight, with_module=True)
             self._register_state_dict_hook(_save)
 
             with torch.no_grad():
@@ -787,6 +792,7 @@ def patch_GraniteMoe_ParallelExperts():
                     self.experts[i].weight.copy_(self.weight[i])
 
             del self.weight
+            self.register_parameter("weight", nn.Parameter(torch.empty(0, dtype=torch.float32), requires_grad=False))
 
         def forward(self, inputs, expert_size):
             input_list = inputs.split(expert_size, dim=0)
