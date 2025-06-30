@@ -750,15 +750,35 @@ def patch_GraniteMoe_ParallelExperts():
             continue
 
         original_init = class_obj.__init__
-        original_forward = class_obj.forward
 
         def __init__(self, num_experts: int, input_size: int, output_size: int) -> None:
             original_init(self, num_experts, input_size, output_size)
             self.experts = nn.ModuleList(
                 [nn.Linear(input_size, output_size, bias=False) for _ in range(num_experts)]
             )
-            for i in range(num_experts):
-                self.experts[i].weight.copy_(self.weight[i])
+
+            def _pre_load(module, state_dict, prefix, *x, **y):
+                key = prefix + "weight"
+                if key not in state_dict:
+                    return
+                
+                weights = state_dict.pop(key)
+                num_experts, out_size, in_size = weights.shape
+                assert num_experts == module.num_experts, f"Expected number of experts to match {num_experts} != {module.num_experts}"
+                for i in range(num_experts):
+                    state_dict[f"{prefix}experts.{i}.weight"] = weights[i]
+
+            def _save(module, state_dict, prefix, keep_vars):
+                slices = [state_dict.pop(f"{prefix}experts.{i}.weight") 
+                          for i in range(len(module.experts))]
+                state_dict[prefix + "weight"] = torch.stack(slices, dim=0)
+
+            self._register_load_state_dict_pre_hook(_pre_load, with_module=True)
+            self._register_state_dict_hook(_save)
+
+            with torch.no_grad():
+                for i in range(num_experts):
+                    self.experts[i].weight.copy_(self.weight[i])
 
             del self.weight
 
